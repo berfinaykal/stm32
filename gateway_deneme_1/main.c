@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +42,8 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-//uint8_t data_rx[];
+char at_command[] = "AT\r\n";
+char rx_buffer[10];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -55,17 +56,11 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-char rx_buffer[100];
-char rx_data;
-uint8_t rx_index = 0;
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    if (huart->Instance == USART2) {
-        if (rx_index < 99) {
-            rx_buffer[rx_index++] = rx_data;
-        }
-        HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_data, 1);
-    }
+void powerkey(void){
+	HAL_GPIO_WritePin(pwrkey_GPIO_Port, pwrkey_Pin, GPIO_PIN_RESET);
+	HAL_Delay(500);
+	HAL_GPIO_WritePin(pwrkey_GPIO_Port, pwrkey_Pin, GPIO_PIN_SET);
+	HAL_Delay(500);
 }
 /* USER CODE END 0 */
 
@@ -75,6 +70,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -99,13 +95,10 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_data, 1);
+  powerkey();
+  HAL_UART_Transmit(&huart2, (uint8_t*)at_command, strlen(at_command), HAL_MAX_DELAY);
+  ReceiveResponse(rx_buffer, sizeof(rx_buffer));
 
-  //for(int i=0; i<=1000;i++){
-    //  	data_tx[i]=67;
-      //}
-      //HAL_UART_Transmit_IT(&huart2, data_tx, sizeof(data_tx));
-      //HAL_UART_Receive_IT(&huart2, data_rx, sizeof(data_rx));
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -201,25 +194,33 @@ static void MX_USART2_UART_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
+/* USER CODE BEGIN MX_GPIO_Init_1 */
+/* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(pwrkey_GPIO_Port, pwrkey_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : PB1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  /*Configure GPIO pin : pwrkey_Pin */
+  GPIO_InitStruct.Pin = pwrkey_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(pwrkey_GPIO_Port, &GPIO_InitStruct);
 
+/* USER CODE BEGIN MX_GPIO_Init_2 */
+/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
-
+void ReceiveResponse(char *response, uint16_t response_length)
+{
+  HAL_UART_Receive(&huart2, (uint8_t*)response, response_length - 1, HAL_MAX_DELAY);
+  response[response_length - 1] = '\0';
+}
 /* USER CODE END 4 */
 
 /**
